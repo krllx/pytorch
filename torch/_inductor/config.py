@@ -759,7 +759,15 @@ nvgemm_autotune_cold_cache: bool = (
 # does not double compile cost for every selected tile.
 nvgemm_prefetch: str = os.environ.get("TORCHINDUCTOR_NVGEMM_PREFETCH", "0")
 
-# Generated NVGEMM variants may specialize on programmatic dependent launch.
+# Control programmatic dependent launch for the vendored SM100 block-scaled
+# NVGEMM kernel: "0" disables it, "auto" applies the measured NVFP4 shape
+# policy, and "1" forces it for every eligible NVFP4 GEMM. Every thread waits
+# before accessing global memory. All threads execute the common release at the
+# kernel tail, so non-epilogue warps can let the dependent grid launch while
+# the epilogue stores continue to drain.
+# Eligible scheduler-adjacent same-stream Triton consumers also continue the
+# PDL chain. Workspace-backed and composite launches are excluded; deferred
+# alignment copies remain ordered on the same stream before the consumer.
 nvgemm_pdl: str = os.environ.get("TORCHINDUCTOR_NVGEMM_PDL", "0")
 
 # Triton conv templates show wins on ROCm; on CUDA, profiling shows no gains on H100.

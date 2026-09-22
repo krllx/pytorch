@@ -447,7 +447,7 @@ def _scaled_candidates(
     if prefetch_mode is None:
         prefetch_mode = config.nvgemm_prefetch
     if use_pdl is None:
-        use_pdl = getattr(config, "nvgemm_pdl", False)
+        use_pdl = config.nvgemm_pdl == "1"
     manifest = _blockscaled_manifest(
         cc,
         _scaled_operand_type_signature(args),
@@ -489,6 +489,7 @@ def partition_compatible_kernels(
     efc_only: bool = False,
     candidate_source: Literal["args", "scaled", "manifest"] = "manifest",
     classifier_key: str | None = None,
+    scaled_use_pdl: bool | None = None,
 ) -> list[list[Any]]:
     """Partition the operators compatible with `args` into N buckets.
 
@@ -505,7 +506,10 @@ def partition_compatible_kernels(
     """
     sig = _partition_sig(args)
     generation_policy = (
-        (config.nvgemm_prefetch, getattr(config, "nvgemm_pdl", False))
+        (
+            config.nvgemm_prefetch,
+            config.nvgemm_pdl == "1" if scaled_use_pdl is None else scaled_use_pdl,
+        )
         if candidate_source == "scaled"
         else None
     )
@@ -530,7 +534,7 @@ def partition_compatible_kernels(
     if candidate_source == "args":
         candidates = _args_query_candidates(args, cc, efc_only)
     elif candidate_source == "scaled":
-        candidates = _scaled_candidates(args, cc, efc_only)
+        candidates = _scaled_candidates(args, cc, efc_only, use_pdl=scaled_use_pdl)
     elif candidate_source == "manifest":
         candidates = _manifest_candidates(args, cc, efc_only)
     else:
